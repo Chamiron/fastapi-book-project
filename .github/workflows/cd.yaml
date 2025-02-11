@@ -1,0 +1,59 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Add SSH Key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Copy code to remote server
+        run: |
+          scp -r . ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}
+
+      - name: Deploy on remote server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd ${{ secrets.DEPLOY_PATH }}
+          sudo apt-get update
+          sudo apt-get install -y nginx
+          sudo rm -f /etc/nginx/sites-enabled/default
+          sudo bash -c 'cat > /etc/nginx/sites-available/fastapi <<EOF2
+          server {
+              listen 80;
+              server_name localhost;
+
+              location / {
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host \$host;
+                  proxy_set_header X-Real-IP \$remote_addr;
+                  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+              }
+          }
+          EOF2'
+          sudo ln -sf /etc/nginx/sites-available/fastapi /etc/nginx/sites-enabled/
+          sudo nginx -t
+          sudo systemctl restart nginx
+          uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4 &
+          EOF
+          
