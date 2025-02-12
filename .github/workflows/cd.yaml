@@ -38,16 +38,16 @@ jobs:
 
       - name: Verify destination path on remote server
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo mkdir -p ${{ secrets.DEPLOY_PATH }} && echo 'Destination path verified'"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo mkdir -p /var/www && sudo chmod -R 755 /var/www && echo 'Destination path verified'"
 
       - name: Copy code to remote server
         run: |
-          scp -r . ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}
+          scp -r . ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www
 
       - name: Deploy on remote server
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          cd ${{ secrets.DEPLOY_PATH }}
+          cd /var/www
           sudo apt-get update
           sudo apt-get install -y nginx
           sudo rm -f /etc/nginx/sites-enabled/default
@@ -55,7 +55,6 @@ jobs:
           server {
               listen 80;
               server_name localhost;
-
               location / {
                   proxy_pass http://127.0.0.1:8000;
                   proxy_set_header Host \$host;
