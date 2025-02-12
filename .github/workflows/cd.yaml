@@ -38,7 +38,7 @@ jobs:
 
       - name: Verify chamiron directory on remote server
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo mkdir -p /home/chamiron && sudo chmod -R 755 /home/chamiron && echo 'Chamiron directory verified'"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo mkdir -p /home/chamiron && sudo chmod -R 777 /home/chamiron && echo 'Chamiron directory verified'"
 
       - name: Copy code to chamiron directory on remote server
         run: |
