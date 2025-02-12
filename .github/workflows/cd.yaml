@@ -38,7 +38,7 @@ jobs:
 
       - name: Verify destination path on remote server
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ${{ secrets.DEPLOY_PATH }} && echo 'Destination path verified'"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo mkdir -p ${{ secrets.DEPLOY_PATH }} && echo 'Destination path verified'"
 
       - name: Copy code to remote server
         run: |
