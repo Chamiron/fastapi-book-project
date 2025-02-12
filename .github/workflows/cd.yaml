@@ -36,18 +36,18 @@ jobs:
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'SSH connection successful'"
 
-      - name: Verify destination path on remote server
+      - name: Verify chamiron directory on remote server
         run: |
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo mkdir -p /var/www && sudo chmod -R 755 /var/www && echo 'Destination path verified'"
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo mkdir -p /home/chamiron && sudo chmod -R 755 /home/chamiron && echo 'Chamiron directory verified'"
 
-      - name: Copy code to remote server
+      - name: Copy code to chamiron directory on remote server
         run: |
-          scp -r . ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www
+          scp -r . ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/chamiron
 
       - name: Deploy on remote server
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          cd /var/www
+          cd /home/chamiron
           sudo apt-get update
           sudo apt-get install -y nginx
           sudo rm -f /etc/nginx/sites-enabled/default
