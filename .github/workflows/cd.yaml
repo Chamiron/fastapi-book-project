@@ -19,6 +19,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          python -m venv venv
+          source venv/bin/activate
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
@@ -48,15 +50,19 @@ jobs:
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           cd /home/chamiron
+          # Set up virtual environment
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          # Install Nginx, Certbot, and Supervisor
           sudo apt-get update
-          sudo apt-get install -y nginx certbot python3-certbot-nginx
-
-          # Set up Nginx for HTTPS
+          sudo apt-get install -y nginx certbot python3-certbot-nginx supervisor
+          # Set up Nginx reverse proxy
           sudo bash -c 'cat > /etc/nginx/sites-available/fastapi <<EOF2
           server {
               listen 80;
               server_name 54.221.60.254;
-
               location / {
                   proxy_pass http://127.0.0.1:8000;
                   proxy_set_header Host \$host;
@@ -65,17 +71,27 @@ jobs:
               }
           }
           EOF2'
-
           sudo ln -sf /etc/nginx/sites-available/fastapi /etc/nginx/sites-enabled/
           sudo nginx -t && sudo systemctl reload nginx
-
           # Obtain SSL Certificate with Let's Encrypt
           sudo certbot --nginx --non-interactive --agree-tos -m ochamerion@gmail.com -d 54.221.60.254
-
           # Restart Nginx with SSL
           sudo systemctl restart nginx
-
-          # Run FastAPI app in the background
+          # Kill any running app
           pkill -f "uvicorn" || true
-          nohup uvicorn main:app --host 127.0.0.1 --port 8000 --workers 4 > app.log 2>&1 &
+          # Set up Supervisor for the FastAPI app
+          sudo bash -c 'cat > /etc/supervisor/conf.d/fastapi.conf <<EOF2
+          [program:fastapi]
+          command=/home/chamiron/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 4
+          directory=/home/chamiron
+          user=${{ secrets.SSH_USER }}
+          autostart=true
+          autorestart=true
+          stderr_logfile=/var/log/fastapi.err.log
+          stdout_logfile=/var/log/fastapi.out.log
+          EOF2'
+          # Reload and start Supervisor
+          sudo supervisorctl reread
+          sudo supervisorctl update
+          sudo supervisorctl start fastapi
           EOF
