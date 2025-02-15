@@ -69,7 +69,10 @@ jobs:
 
       - name: Compress files for transfer
         run: |
-          tar -czf deploy.tar.gz --exclude='.git' --exclude='venv' --exclude='.env' --exclude='Dockerfile' --exclude='docker-compose.yaml' .
+          mkdir -p /tmp/deploy
+          rsync -av --exclude='.git' --exclude='venv' --exclude='.env' --exclude='Dockerfile' --exclude='docker-compose.yaml' . /tmp/deploy
+          tar -czf deploy.tar.gz -C /tmp/deploy .
+          rm -rf /tmp/deploy
 
       - name: Copy compressed files to remote server
         run: |
